@@ -21,6 +21,27 @@ def require_model():
         st.warning("⚠️ Model belum dilatih. Silakan lakukan clustering di menu **Analisis Data**.")
         st.stop()
 
+# --- HELPER: KONVERSI FORMAT ANGKA ---
+def convert_numeric_columns(df: pd.DataFrame, columns: list):
+    """
+    Mengkonversi kolom dengan format angka string (1.175.267) ke float.
+    Format dengan titik sebagai pemisah ribuan akan dikonversi ke numerik.
+    """
+    df = df.copy()
+    for col in columns:
+        if col in df.columns:
+            # Cek apakah kolom berupa string
+            if df[col].dtype == 'object':
+                # Hapus titik pemisah ribuan dan ganti koma dengan titik (jika ada)
+                df[col] = df[col].astype(str).str.replace('.', '', regex=False)
+                df[col] = df[col].str.replace(',', '.', regex=False)
+                # Konversi ke numeric, error jadi NaN
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+            else:
+                # Pastikan sudah numeric
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+    return df
+
 # --- HELPER: PREPROCESSING (SCALING) ---
 def preprocess_data(df: pd.DataFrame):
     """
@@ -35,6 +56,9 @@ def preprocess_data(df: pd.DataFrame):
     if missing_cols:
         st.error(f"❌ Kolom berikut tidak ditemukan: {missing_cols}")
         st.stop()
+
+    # Konversi kolom fitur ke format numerik (handle format 1.175.267)
+    df = convert_numeric_columns(df, features)
 
     # Ambil kolom fitur saja + Judul (untuk info tooltip nanti)
     # Jika dataset punya judul film, kita sertakan, jika tidak skip

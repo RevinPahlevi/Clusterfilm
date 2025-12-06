@@ -19,9 +19,9 @@ def init_session_state():
     if "cluster_labels" not in st.session_state:
         st.session_state["cluster_labels"] = None
 
-    # Fitur yang digunakan untuk clustering
-    if "features" not in st.session_state:
-        st.session_state["features"] = [
-            "vote_average",  # Rating
-            "popularity"     # Popularitas
-        ]
+    # Fitur yang digunakan untuk clustering - SELALU set ulang
+    st.session_state["features"] = [
+        "vote_average",  # Rating
+        "popularity",    # Popularitas
+        "vote_count"     # Jumlah Vote
+    ]
