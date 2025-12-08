@@ -17,13 +17,20 @@ add_custom_css() # Gunakan style.py yang sama, atau sesuaikan warna
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.title("🎬 MovieClusters")
+    # Logo - centered dan lebih kecil
+    st.image("static/logo.png", width=100)
     st.markdown("---")
     
     menu = ["Home", "Upload Dataset", "Preprocessing", "Clustering Process", "Visualization", "Rekomendasi", "About"]
     
+    # Get current page
+    current_page = st.session_state.get("page", "Home")
+    
     for item in menu:
-        if st.button(item, use_container_width=True):
+        # Set button type based on active page
+        button_type = "primary" if item == current_page else "secondary"
+        
+        if st.button(item, type=button_type, use_container_width=True, key=f"nav_{item}"):
             st.session_state["page"] = item
             st.rerun()
 
