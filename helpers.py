@@ -133,7 +133,8 @@ def plot_clusters(df, labels, centers):
 # --- HELPER: INTERPRETASI CLUSTER ---
 def interpret_clusters(df_clean):
     """
-    Memberikan interpretasi/label untuk setiap cluster berdasarkan karakteristiknya.
+    Memberikan interpretasi/label UNIK untuk setiap cluster berdasarkan karakteristiknya.
+    Menggunakan sistem ranking untuk memastikan tidak ada duplikasi label.
     
     Returns:
         dict: {cluster_id: {'label': str, 'description': str, 'avg_rating': float, 'avg_popularity': float}}
@@ -143,6 +144,56 @@ def interpret_clusters(df_clean):
     # Hitung rata-rata fitur per cluster
     cluster_stats = df_clean.groupby("Cluster")[features].mean().reset_index()
     
+    # Normalisasi rating dan popularity ke skala 0-1 untuk perbandingan fair
+    rating_min = cluster_stats['vote_average'].min()
+    rating_max = cluster_stats['vote_average'].max()
+    pop_min = cluster_stats['popularity'].min()
+    pop_max = cluster_stats['popularity'].max()
+    
+    # Hindari division by zero
+    rating_range = rating_max - rating_min if rating_max != rating_min else 1
+    pop_range = pop_max - pop_min if pop_max != pop_min else 1
+    
+    cluster_stats['rating_norm'] = (cluster_stats['vote_average'] - rating_min) / rating_range
+    cluster_stats['pop_norm'] = (cluster_stats['popularity'] - pop_min) / pop_range
+    
+    # Buat skor komposit (rating lebih penting, bobot 60:40)
+    cluster_stats['composite_score'] = cluster_stats['rating_norm'] * 0.6 + cluster_stats['pop_norm'] * 0.4
+    
+    # Ranking berdasarkan skor komposit (tertinggi = rank 1)
+    cluster_stats['rank'] = cluster_stats['composite_score'].rank(ascending=False, method='first').astype(int)
+    
+    # Definisi label berdasarkan jumlah cluster
+    n_clusters = len(cluster_stats)
+    
+    # Label pool dengan prioritas (akan dipilih berdasarkan ranking)
+    label_definitions = [
+        {
+            'label': "🌟 Blockbuster",
+            'description': "Film berkualitas tinggi dengan popularitas sangat baik. Film-film yang banyak ditonton dan mendapat rating bagus."
+        },
+        {
+            'label': "💎 Hidden Gems", 
+            'description': "Film berkualitas tinggi namun kurang populer. Mungkin film indie atau kurang promosi namun berkualitas."
+        },
+        {
+            'label': "🎬 Mainstream",
+            'description': "Film populer dengan kualitas cukup baik. Film komersial yang banyak ditonton dan cukup disukai."
+        },
+        {
+            'label': "📽️ Average Films",
+            'description': "Film dengan rating dan popularitas rata-rata. Film standar yang tidak terlalu menonjol."
+        },
+        {
+            'label': "📺 Populer Kontroversial",
+            'description': "Film populer namun rating rendah. Mungkin banyak ditonton tapi kurang disukai kritikus."
+        },
+        {
+            'label': "🎞️ Niche/Low Quality",
+            'description': "Film dengan rating dan popularitas rendah. Film dengan target audiens terbatas atau kualitas kurang."
+        },
+    ]
+    
     interpretations = {}
     
     for _, row in cluster_stats.iterrows():
@@ -150,38 +201,16 @@ def interpret_clusters(df_clean):
         avg_rating = row['vote_average']
         avg_popularity = row['popularity']
         avg_vote_count = row.get('vote_count', 0)
+        rank = int(row['rank'])
         
-        # Tentukan label berdasarkan rating dan popularitas
-        # High Rating (>7), High Popularity (>median)
-        # Medium Rating (5-7), Medium Popularity
-        # Low Rating (<5), Low Popularity
-        
-        # Kategorisasi berdasarkan kombinasi rating dan popularitas
-        if avg_rating >= 7.0:
-            if avg_popularity >= cluster_stats['popularity'].median():
-                label = "🌟 Blockbuster"
-                description = "Film berkualitas tinggi dengan popularitas sangat baik. Film-film yang banyak ditonton dan mendapat rating bagus."
-            else:
-                label = "💎 Hidden Gems"
-                description = "Film berkualitas tinggi namun kurang populer. Mungkin film indie atau kurang promosi namun berkualitas."
-        elif avg_rating >= 6.0:
-            if avg_popularity >= cluster_stats['popularity'].median():
-                label = "🎬 Mainstream"
-                description = "Film populer dengan kualitas cukup baik. Film komersial yang banyak ditonton dan cukup disukai."
-            else:
-                label = "📽️ Average Films"
-                description = "Film dengan rating dan popularitas rata-rata. Film standar yang tidak terlalu menonjol."
-        else:
-            if avg_popularity >= cluster_stats['popularity'].median():
-                label = "📺 Populer Kontroversial"
-                description = "Film populer namun rating rendah. Mungkin banyak ditonton tapi kurang disukai kritikus."
-            else:
-                label = "🎞️ Niche/Low Quality"
-                description = "Film dengan rating dan popularitas rendah. Film dengan target audiens terbatas atau kualitas kurang."
+        # Pilih label berdasarkan ranking (rank 1 = label terbaik)
+        # Jika cluster lebih banyak dari label, gunakan modulo
+        label_idx = min(rank - 1, len(label_definitions) - 1)
+        selected_label = label_definitions[label_idx]
         
         interpretations[cluster_id] = {
-            'label': label,
-            'description': description,
+            'label': selected_label['label'],
+            'description': selected_label['description'],
             'avg_rating': round(avg_rating, 2),
             'avg_popularity': round(avg_popularity, 2),
             'avg_vote_count': round(avg_vote_count, 2) if avg_vote_count else 0,

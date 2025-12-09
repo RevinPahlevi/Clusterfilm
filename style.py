@@ -1892,12 +1892,13 @@ def add_custom_css():
         }
         
         .clustering-subtitle {
-            font-size: 0.85rem;
-            color: rgba(250, 240, 202, 0.9);
-            font-weight: 500;
+            font-size: 0.95rem;
+            color: #F4D35E;
+            font-weight: 600;
             margin: 0;
             position: relative;
             z-index: 1;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
         }
         
         /* K-Means Info Card */
@@ -1984,8 +1985,9 @@ def add_custom_css():
         }
         
         .step-desc {
-            font-size: 0.75rem;
-            color: #6c757d;
+            font-size: 0.85rem;
+            color: #4a5568;
+            font-weight: 500;
         }
         
         /* Elbow Explanation */
