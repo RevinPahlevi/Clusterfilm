@@ -78,15 +78,15 @@ def show_recommendation():
             </div>
         """, unsafe_allow_html=True)
         pop = st.slider(
-            "Popularitas (0 - 1000)", 
+            "Popularitas", 
             min_value=0.0, 
-            max_value=1000.0, 
-            value=50.0,
-            step=1.0,
-            help="Tingkat popularitas film",
+            max_value=2000000.0, 
+            value=50000.0,
+            step=1000.0,
+            help="Tingkat popularitas film (Blockbuster: >500,000)",
             label_visibility="collapsed"
         )
-        st.markdown(f"""<div class="slider-value">{pop:.0f}</div>""", unsafe_allow_html=True)
+        st.markdown(f"""<div class="slider-value">{pop:,.0f}</div>""", unsafe_allow_html=True)
         
     with col3:
         st.markdown("""
@@ -96,12 +96,12 @@ def show_recommendation():
             </div>
         """, unsafe_allow_html=True)
         vote_count = st.slider(
-            "Vote Count (0 - 50,000)", 
+            "Vote Count", 
             min_value=0, 
-            max_value=50000, 
-            value=1000,
-            step=100,
-            help="Jumlah vote/rating",
+            max_value=100000, 
+            value=5000,
+            step=500,
+            help="Jumlah vote/rating yang diterima film",
             label_visibility="collapsed"
         )
         st.markdown(f"""<div class="slider-value">{vote_count:,}</div>""", unsafe_allow_html=True)
@@ -125,11 +125,24 @@ def show_recommendation():
         # 3. Prediksi Cluster
         cluster_pred = model.predict(input_scaled)[0]
         
-        # 4. Ambil interpretasi cluster
-        from helpers import interpret_clusters
+        # 4. Ambil interpretasi cluster untuk statistik
+        from helpers import interpret_clusters, get_input_based_label
         df = st.session_state["clean_df"]
         interpretations = interpret_clusters(df)
-        cluster_info = interpretations[cluster_pred]
+        cluster_stats = interpretations[cluster_pred]
+        
+        # 5. Gunakan label berdasarkan INPUT USER, bukan rata-rata cluster
+        input_label_info = get_input_based_label(rating, pop, vote_count)
+        
+        # 6. Gabungkan label input dengan statistik cluster
+        cluster_info = {
+            'label': input_label_info['label'],
+            'description': input_label_info['description'],
+            'avg_rating': cluster_stats['avg_rating'],
+            'avg_popularity': cluster_stats['avg_popularity'],
+            'avg_vote_count': cluster_stats.get('avg_vote_count', 0),
+            'count': cluster_stats['count']
+        }
         
         # ===== RESULT SECTION =====
         st.markdown("<div style='height: 1rem;'></div>", unsafe_allow_html=True)

@@ -21,6 +21,109 @@ def require_model():
         st.warning("⚠️ Model belum dilatih. Silakan lakukan clustering di menu **Analisis Data**.")
         st.stop()
 
+# --- HELPER: LABEL BERDASARKAN INPUT USER ---
+def get_input_based_label(rating, popularity, vote_count):
+    """
+    Memberikan label kategori berdasarkan karakteristik input user.
+    Menggunakan threshold berdasarkan distribusi data aktual:
+    
+    Berdasarkan data clustering:
+    - C0 Hidden Gems: Rating 7.5, Popularity 55,591 (rating tinggi, popularity sedang)
+    - C1 Average Films: Rating 6.0, Popularity 19,530 (rating & popularity rendah-sedang)
+    - C2 Blockbuster: Rating 7.5, Popularity 1,713,712 (rating tinggi, popularity SANGAT tinggi)
+    - C3 Mainstream: Rating 7.2, Popularity 23,061 (rating sedang-tinggi, popularity sedang)
+    
+    Args:
+        rating: float, nilai rating film (0-10)
+        popularity: float, nilai popularitas film
+        vote_count: int, jumlah vote film
+    
+    Returns:
+        dict: {'label': str, 'description': str}
+    """
+    # ===== THRESHOLD BERDASARKAN DATA AKTUAL =====
+    # Rating thresholds
+    EXCELLENT_RATING = 7.0    # Rating sangat baik (Hidden Gems, Blockbuster)
+    GOOD_RATING = 6.5         # Rating cukup baik (Mainstream)
+    
+    # Popularity thresholds (berdasarkan data aktual)
+    BLOCKBUSTER_POP = 500000  # Popularity sangat tinggi (>500K = Blockbuster territory)
+    HIGH_POP = 100000         # Popularity tinggi (100K-500K)
+    MEDIUM_POP = 30000        # Popularity sedang (30K-100K = Hidden Gems, Mainstream)
+    
+    # ===== DECISION LOGIC =====
+    
+    # 1. BLOCKBUSTER: Rating tinggi + Popularity SANGAT tinggi
+    if rating >= EXCELLENT_RATING and popularity >= BLOCKBUSTER_POP:
+        return {
+            'label': "🌟 Blockbuster",
+            'description': "Film dengan kualitas tinggi dan popularitas luar biasa. "
+                          "Film-film ini adalah yang paling banyak ditonton dan dibicarakan, "
+                          "mendapat rating sangat baik dari penonton, dan biasanya merupakan "
+                          "film-film box office dengan budget besar dan marketing yang kuat. "
+                          "Contoh: Film Marvel, film franchise populer, dan blockbuster Hollywood."
+        }
+    
+    # 2. HIDDEN GEMS: Rating tinggi + Popularity RENDAH/SEDANG
+    elif rating >= EXCELLENT_RATING and popularity < HIGH_POP:
+        return {
+            'label': "💎 Hidden Gems",
+            'description': "Film berkualitas tinggi yang belum banyak diketahui publik. "
+                          "Meskipun mendapat rating sangat baik, film-film ini kurang populer "
+                          "karena mungkin merupakan film indie, film festival, atau film dengan "
+                          "distribusi terbatas. Sangat direkomendasikan untuk dicoba karena "
+                          "menawarkan kualitas setara blockbuster tanpa hype berlebihan. "
+                          "Cocok untuk penonton yang mencari film berkualitas di luar mainstream."
+        }
+    
+    # 3. MAINSTREAM: Rating cukup baik + Popularity sedang-tinggi
+    elif rating >= GOOD_RATING and popularity >= MEDIUM_POP:
+        return {
+            'label': "🎬 Mainstream",
+            'description': "Film populer dengan kualitas yang cukup baik. "
+                          "Film-film komersial yang banyak ditonton dan cukup disukai penonton. "
+                          "Biasanya film dengan genre populer seperti action, comedy, atau drama "
+                          "yang memiliki daya tarik luas. Tidak sebesar blockbuster tapi tetap "
+                          "menjadi pilihan yang solid untuk hiburan. "
+                          "Cocok untuk menonton santai dengan keluarga atau teman."
+        }
+    
+    # 4. POPULER KONTROVERSIAL: Popularity tinggi + Rating rendah
+    elif popularity >= HIGH_POP and rating < GOOD_RATING:
+        return {
+            'label': "📺 Populer Kontroversial",
+            'description': "Film yang sangat populer namun mendapat rating rendah dari penonton. "
+                          "Film-film ini mungkin viral karena kontroversi, marketing gencar, "
+                          "atau franchise besar namun eksekusinya kurang memuaskan. "
+                          "Banyak ditonton tapi sering dikritik. Mungkin menarik untuk ditonton "
+                          "agar bisa ikut diskusi, tapi jangan berharap kualitas tinggi. "
+                          "Contoh: Sequel yang mengecewakan, adaptasi kontroversial."
+        }
+    
+    # 5. AVERAGE FILMS: Rating dan popularity sedang
+    elif rating >= 5.0 and rating < EXCELLENT_RATING:
+        return {
+            'label': "📽️ Average Films",
+            'description': "Film dengan kualitas dan popularitas rata-rata. "
+                          "Tidak buruk tapi juga tidak menonjol. Film-film standar yang "
+                          "mungkin cocok untuk mengisi waktu luang tanpa ekspektasi tinggi. "
+                          "Biasanya film dengan cerita yang bisa ditebak atau eksekusi biasa saja. "
+                          "Cocok jika Anda tidak punya pilihan lain atau sekedar ingin menonton "
+                          "sesuatu tanpa harus berpikir terlalu banyak."
+        }
+    
+    # 6. NICHE/LOW QUALITY: Rating dan popularity rendah
+    else:
+        return {
+            'label': "🎞️ Niche/Low Quality",
+            'description': "Film dengan rating dan popularitas rendah. "
+                          "Mungkin film dengan target audiens sangat spesifik (film arthouse ekstrem, "
+                          "film B-movie, atau film dengan budget sangat rendah), atau memang "
+                          "memiliki kualitas yang kurang baik. Perlu pertimbangan matang sebelum "
+                          "menonton kecuali Anda memang penggemar genre tertentu. "
+                          "Beberapa mungkin memiliki cult following yang kecil tapi loyal."
+        }
+
 # --- HELPER: KONVERSI FORMAT ANGKA ---
 def convert_numeric_columns(df: pd.DataFrame, columns: list):
     """
